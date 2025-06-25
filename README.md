@@ -1,6 +1,6 @@
-# Menu Explainer
+# polishedRAG
 
-Menu Explainer is an AI-powered app designed to help restaurant servers quickly learn the food and wine menu, answer common guest questions, and improve their menu knowledge. The app uses advanced AI technologies to provide instant answers about food and wine pairings, dietary restrictions (like gluten-free options), and ingredient details (such as pork content).
+polishedRAG is an AI-powered app designed to help restaurant servers quickly learn the food and wine menu, answer common guest questions, and improve their menu knowledge. The app uses advanced AI technologies to provide instant answers about food and wine pairings, dietary restrictions (like gluten-free options), and ingredient details (such as pork content).
 
 ## Features
 
@@ -22,7 +22,7 @@ Menu Explainer is an AI-powered app designed to help restaurant servers quickly 
 
 1. **Clone the repository:**
     ```
-    git clone https://github.com/yourusername/menu-explainer.git
+    git clone https://github.com/melvingonzalezjr/polishedRAG.git
     cd menu-explainer
     ```
 

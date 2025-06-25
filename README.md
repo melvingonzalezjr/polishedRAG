@@ -12,7 +12,7 @@ polishedRAG is an AI-powered app designed to help restaurant servers quickly lea
 ## Technologies Used
 
 - **Python:** Core programming language.
-- **Streamlit:** For building the interactive web app.
+- **Chainlit:** For building the interactive web app.
 - **LangChain:** Framework for developing language model-powered applications.
 - **RAG (Retrieval-Augmented Generation):** Enhances AI responses with relevant menu data.
 - **OpenAI:** Provides the language model for natural language understanding.
@@ -33,7 +33,7 @@ polishedRAG is an AI-powered app designed to help restaurant servers quickly lea
 
 3. **Run the app:**
     ```
-    streamlit run app.py
+    chainlit run app.py
     ```
 
 ## Usage

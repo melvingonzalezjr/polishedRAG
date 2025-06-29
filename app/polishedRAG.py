@@ -33,7 +33,7 @@ wine_loader = PyPDFLoader(file_path="data/wine_menu.pdf")
 wine_data = wine_loader.load()
 
 ########## SPLIT THE DOCUMENTS INTO CHUNKS ###########
-# Split the documents into smaller chunks for better processing
+# Create the text splitter for chunking the documents
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=1000, 
     chunk_overlap=200
@@ -41,5 +41,22 @@ text_splitter = RecursiveCharacterTextSplitter(
 
 # Split the food and wine documents into smaller chunks and store them into a single list
 food_and_wine_docs = text_splitter.split_documents(food_data + wine_data)
-print(len(food_and_wine_docs), food_and_wine_docs[3])
+
+#create a single list of chunks (w/o metadata)
+food_wine_document = []
+for doc in food_and_wine_docs:
+    chunk = doc.page_content
+    food_wine_document.append(chunk)
+
+print(food_wine_document[:2])  # Print the first two chunks for verification
+
+########## EMBEDDINGS ###########
+#Create the embeddings model
+embeddings_model = OpenAIEmbeddings(model='text-embedding-3-small')
+
+ 
+
+
+
+
 

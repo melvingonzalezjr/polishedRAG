@@ -77,6 +77,8 @@ results = collection.query(
     n_results=1
 )
 
+print("Results:", results)
+
 
 
 

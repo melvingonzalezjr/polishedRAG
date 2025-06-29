@@ -10,7 +10,7 @@ from langchain.schema import Document, StrOutputParser
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema.embeddings import Embeddings
-from langchain_community.embeddings.openai import OpenAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.vectorstores.base import VectorStore
 
@@ -48,13 +48,34 @@ for doc in food_and_wine_docs:
     chunk = doc.page_content
     food_wine_document.append(chunk)
 
-print(food_wine_document[:2])  # Print the first two chunks for verification
-
 ########## EMBEDDINGS ###########
-#Create the embeddings model
-embeddings_model = OpenAIEmbeddings(model='text-embedding-3-small')
+#Create the embeddings model (using free local model)
+embeddings_model = HuggingFaceEmbeddings(model_name='all-MiniLM-L6-v2')
 
- 
+#Create the embeddings vector
+embeddings = embeddings_model.embed_documents(food_wine_document)
+
+########## VECTOR STORE ###########
+#Create Choma client
+chroma_client = chromadb.Client()
+
+#Create collection
+collection = chroma_client.create_collection(name="pinstripes_menu_collection")
+
+#Add text documents to the collection
+ids = [f"doc_{i}" for i in range(len(food_wine_document))]
+
+collection.add(
+    documents=food_wine_document,
+    ids=ids,
+    embeddings=embeddings
+)
+
+#test results
+results = collection.query(
+    query_texts=["Are the ribs made from pork or beef?"],
+    n_results=1
+)
 
 
 

@@ -1,10 +1,19 @@
-from langchain.chains import LLMChain
+import chainlit as cl
+
+import chromadb
+from chromadb.config import Settings
+
+from langchain.chains import LLMChain, RetrievalQAWithSourcesChain
 from langchain.prompts import ChatPromptTemplate
 from langchain_community.chat_models import ChatOpenAI
-from langchain.schema import StrOutputParser
-import chainlit as cl
+from langchain.schema import Document, StrOutputParser
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.schema.embeddings import Embeddings
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.vectorstores import Chroma
+from langchain.vectorstores.base import VectorStore
+
 
 # Load the food and wine menus
 food_loader = PyPDFLoader(file_path="data/food_menu.pdf")
@@ -12,8 +21,6 @@ food_data = food_loader.load()
 
 wine_loader = PyPDFLoader(file_path="data/wine_menu.pdf")
 wine_data = wine_loader.load()
-
-print(f"Loaded {len(food_data)} food documents and {len(wine_data)} wine documents.")
 
 # Split the documents into smaller chunks for better processing
 text_splitter = RecursiveCharacterTextSplitter(
@@ -24,14 +31,54 @@ text_splitter = RecursiveCharacterTextSplitter(
 # Split the food and wine documents into smaller chunks and store them into a single list
 food_and_wine_docs = text_splitter.split_documents(food_data + wine_data)
 
-print(f"Split into {len(food_and_wine_docs)} chunks.")
+#Adding source_id into metadata for each document
+# This will help us identify the source of each chunk later on
+for i, doc in enumerate(food_and_wine_docs):
+    doc.metadata["source"] = f"source_{i}"
+
+pinstripes_food_wine_Document = Document(food_and_wine_docs)
+def create_search_engine(
+        *, docs: list[Document], embeddings: Embeddings
+) -> VectorStore:
+    
+    # Initialize Chromadb client to enable resetting and disable telemtry
+    client = chromadb.EphemeralClient()
+    client_settings = Settings(allow_reset=True, anonymized_telemetry=False)
+
+    # Reset the search engine to ensure we don't use old copies.
+    search_engine = Chroma(client=client, client_settings=client_settings)
+    search_engine._client.reset()
+
+    search_engine = Chroma.from_documents(
+        client=client,
+        documents=pinstripes_food_wine_Document,
+        embedding=embeddings,
+        client_settings=client_settings
+    )
+
+    return search_engine
+    
+    
+
 
 @cl.on_chat_start
 async def on_chat_start():
 
+    embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
+
+    try:
+        search_engine = await cl.make_async(create_search_engine)(
+            docs=pinstripes_food_wine_Document,
+            embeddings=embeddings
+        )
+    except Exception as e:
+        await cl.Message(content=f"Error: {e}").send()
+        raise SystemError
+
     # Start with a chat model 
     model = ChatOpenAI(
         model="gpt-4.1-nano",
+        temperature=0,
         streaming = True
     )
 
@@ -48,10 +95,12 @@ async def on_chat_start():
 
     # Create an LLMChain that combines the model and the prompt
     # The output will be a string, so we use StrOutputParser to parse the output
-    # A chainis one or more series of LLM calls that can be used to process input and generate output
-    chain= LLMChain(
+    # A chain is one or more series of LLM calls that can be used to process input and generate output
+    chain= RetrievalQAWithSourcesChain.from_chain_type(
         llm=model,
         prompt=prompt,
+        chain_type="stuff",
+        retriever=search_engine.as_retriever(max_tokens_limit=4097),
         output_parser=StrOutputParser()
     )
 
@@ -71,11 +120,26 @@ async def main(message: cl.Message):
     # loading the chain from the user session
     chain = cl.user_session.get("chain")
     
-    response = await chain.arun(
-        question=message.content,
-        callbacks=[cl.LangchainCallbackHandler()]  # This will handle the streaming response and send it back to the user
-
+    response = await chain.acall(
+        message.content,
+        callbacks=[cl.AsyncLangchainCallbackHandler(stream_final_answer=True)]
     )
+    answer = response["answer"]
+    sources = response["sources"].strip()
 
+    #getting the documents from user session
+
+    documents = cl.user_session.get("docs")
+    metadatas = [doc.metadata for doc in documents]
+    all_sources = [m["source"] for m in metadatas]
+
+    #Now adding sources to answer
+    source_elements = []
+    if sources:
+        found_sources = []
+
+
+
+        ff
     await cl.Message(content=response).send()
 
